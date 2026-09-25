@@ -2,7 +2,15 @@
 <html lang="en">
 	<head>
 		<meta charset="utf-8">
-		<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0">
+		<!-- Luconia's custom Web shell (Godot 4.6.2's default full-size shell +
+		     safe areas): `viewport-fit=cover` lets the canvas run under the notch /
+		     Dynamic Island and the home indicator; the game reads the insets from
+		     `window.luconiaSafeArea()` (scripts/view/SafeArea.gd) and keeps its
+		     bars clear of them. Keep the exporter's GODOT placeholders (the
+		     dollar-prefixed names): the export fills them in. Thread support stays
+		     OFF (GitHub Pages sends no COOP / COEP). -->
+		<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, viewport-fit=cover">
+		<meta name="theme-color" content="#171020">
 		<title>Luconia</title>
 		<style>
 html, body, #canvas {
@@ -13,7 +21,7 @@ html, body, #canvas {
 
 body {
 	color: white;
-	background-color: black;
+	background-color: #171020;
 	overflow: hidden;
 	touch-action: none;
 }
@@ -24,6 +32,22 @@ body {
 
 #canvas:focus {
 	outline: none;
+}
+
+/* Safe-area probe: an invisible element padded by the browser's safe-area
+   insets, so the game can read them as computed px (env() is CSS-only). */
+#safe-area-probe {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 0;
+	height: 0;
+	visibility: hidden;
+	pointer-events: none;
+	padding-top: env(safe-area-inset-top, 0px);
+	padding-right: env(safe-area-inset-right, 0px);
+	padding-bottom: env(safe-area-inset-bottom, 0px);
+	padding-left: env(safe-area-inset-left, 0px);
 }
 
 #status, #status-splash, #status-progress {
@@ -71,7 +95,7 @@ body {
 }
 
 #status-progress {
-	bottom: 10%;
+	bottom: max(10%, env(safe-area-inset-bottom, 0px));
 	width: 50%;
 	margin: 0 auto;
 }
@@ -99,6 +123,8 @@ body {
 			Your browser does not support the canvas tag.
 		</canvas>
 
+		<div id="safe-area-probe"></div>
+
 		<noscript>
 			Your browser does not support JavaScript.
 		</noscript>
@@ -109,9 +135,28 @@ body {
 			<div id="status-notice"></div>
 		</div>
 
+		<script>
+// Safe-area insets for the game (SafeArea.gd reads this through
+// JavaScriptBridge): "top,right,bottom,left,dpr" — CSS px per side plus the
+// device pixel ratio, so the game can turn them into device px.
+window.luconiaSafeArea = function () {
+	var dpr = window.devicePixelRatio || 1;
+	var probe = document.getElementById('safe-area-probe');
+	if (!probe) {
+		return '0,0,0,0,' + dpr;
+	}
+	var cs = window.getComputedStyle(probe);
+	var px = function (v) {
+		var n = parseFloat(v);
+		return (isFinite(n) && n > 0) ? n : 0;
+	};
+	return [px(cs.paddingTop), px(cs.paddingRight), px(cs.paddingBottom), px(cs.paddingLeft), dpr].join(',');
+};
+		</script>
+
 		<script src="index.js"></script>
 		<script>
-const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":false,"executable":"index","experimentalVK":true,"fileSizes":{"index.pck":1136688,"index.wasm":37695054},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4};
+const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":false,"executable":"index","experimentalVK":true,"fileSizes":{"index.pck":1142316,"index.wasm":37695054},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4};
 const GODOT_THREADS_ENABLED = false;
 const engine = new Engine(GODOT_CONFIG);
 
