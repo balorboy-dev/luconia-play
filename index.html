@@ -170,7 +170,7 @@ body {
 // Safe-area insets for the game (SafeArea.gd reads this through
 // JavaScriptBridge): "top,right,bottom,left,dpr" — CSS px per side plus the
 // device pixel ratio, so the game can turn them into device px.
-window.luconiaSafeArea = function () {
+window.luconiaSafeArea = function () { /* HOTFIX-SAFEAREA */ return '0,0,0,0,' + (window.devicePixelRatio || 1);
 	var dpr = window.devicePixelRatio || 1;
 	var probe = document.getElementById('safe-area-probe');
 	if (!probe) {
