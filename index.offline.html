@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<!-- Luconia's offline page (the Web export's PWA service worker shows it
+		     when the game files aren't cached yet and the network is down). -->
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+		<meta name="theme-color" content="#171020">
+		<title>Luconia · offline</title>
+		<style>
+html, body {
+	margin: 0;
+	padding: 0;
+	height: 100%;
+	background-color: #171020;
+	color: #f4f2f8;
+	font-family: 'Noto Sans', 'Droid Sans', Arial, sans-serif;
+}
+
+body {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+}
+
+.card {
+	max-width: 320px;
+	margin: 0 24px;
+	padding: 24px;
+	background-color: #33304d;
+	border: 2px solid #f2cc59;
+	border-radius: 12px;
+	box-shadow: 0 6px 0 rgba(0, 0, 0, 0.35);
+	text-align: center;
+}
+
+h1 {
+	margin: 0 0 12px;
+	color: #ffe766;
+	font-size: 28px;
+	letter-spacing: 1px;
+}
+
+p {
+	margin: 0 0 12px;
+	line-height: 1.4;
+}
+
+a {
+	display: inline-block;
+	margin-top: 8px;
+	padding: 12px 24px;
+	background-color: #ffe766;
+	color: #241830;
+	border-radius: 8px;
+	font-weight: bold;
+	text-decoration: none;
+}
+		</style>
+	</head>
+	<body>
+		<div class="card">
+			<h1>Luconia</h1>
+			<p>You're offline.</p>
+			<p>Connect to the internet once so the game can load. After that it plays offline too.</p>
+			<a href="./">Try again</a>
+		</div>
+	</body>
+</html>

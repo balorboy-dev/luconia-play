@@ -11,6 +11,13 @@
 		     OFF (GitHub Pages sends no COOP / COEP). -->
 		<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, viewport-fit=cover">
 		<meta name="theme-color" content="#171020">
+		<!-- PWA (part e): added to the Home Screen the game opens standalone —
+		     portrait, no browser bars (the export's manifest says the same; these
+		     tags cover iOS, whose status bar then overlays the safe-area top). -->
+		<meta name="mobile-web-app-capable" content="yes">
+		<meta name="apple-mobile-web-app-capable" content="yes">
+		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+		<meta name="apple-mobile-web-app-title" content="Luconia">
 		<title>Luconia</title>
 		<style>
 html, body, #canvas {
@@ -48,6 +55,27 @@ body {
 	padding-right: env(safe-area-inset-right, 0px);
 	padding-bottom: env(safe-area-inset-bottom, 0px);
 	padding-left: env(safe-area-inset-left, 0px);
+}
+
+/* Service-worker update bar: a newer build installed behind the running one
+   (the PWA cache keeps serving the old build until every tab / the app
+   closes); a tap drops the old worker and reloads. Hidden until then. */
+#update-bar {
+	display: none;
+	position: fixed;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	z-index: 2;
+	padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+	background-color: #241830;
+	color: #ffe766;
+	border-top: 2px solid #ffe766;
+	font-family: 'Noto Sans', 'Droid Sans', Arial, sans-serif;
+	font-size: 15px;
+	font-weight: bold;
+	text-align: center;
+	cursor: pointer;
 }
 
 #status, #status-splash, #status-progress {
@@ -116,6 +144,7 @@ body {
 		</style>
 		<link id="-gd-engine-icon" rel="icon" type="image/png" href="index.icon.png" />
 <link rel="apple-touch-icon" href="index.apple-touch-icon.png"/>
+<link rel="manifest" href="index.manifest.json">
 
 	</head>
 	<body>
@@ -124,6 +153,8 @@ body {
 		</canvas>
 
 		<div id="safe-area-probe"></div>
+
+		<div id="update-bar">New version ready · tap to restart</div>
 
 		<noscript>
 			Your browser does not support JavaScript.
@@ -152,11 +183,33 @@ window.luconiaSafeArea = function () {
 	};
 	return [px(cs.paddingTop), px(cs.paddingRight), px(cs.paddingBottom), px(cs.paddingLeft), dpr].join(',');
 };
+
+// How the page runs, for the one-time "Add to Home Screen" tip
+// (HomeScreenTip.gd reads this through JavaScriptBridge): "standalone,mobile,os"
+// — 1 / 0 flags (already installed full screen; a phone or tablet) and
+// ios / android / other.
+window.luconiaInstall = function () {
+	var standalone = false;
+	try {
+		standalone = (window.navigator.standalone === true)
+			|| (!!window.matchMedia && window.matchMedia('(display-mode: standalone)').matches)
+			|| (!!window.matchMedia && window.matchMedia('(display-mode: fullscreen)').matches);
+	} catch (e) {
+		standalone = false;
+	}
+	var ua = window.navigator.userAgent || '';
+	var ios = /iPhone|iPad|iPod/.test(ua) || (window.navigator.platform === 'MacIntel' && window.navigator.maxTouchPoints > 1);
+	var android = /Android/.test(ua);
+	var touch = ('ontouchstart' in window) || (window.navigator.maxTouchPoints > 0);
+	var small = Math.min(window.screen.width || 0, window.screen.height || 0) < 900;
+	var mobile = ios || android || (touch && small);
+	return (standalone ? '1' : '0') + ',' + (mobile ? '1' : '0') + ',' + (ios ? 'ios' : (android ? 'android' : 'other'));
+};
 		</script>
 
 		<script src="index.js"></script>
 		<script>
-const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":false,"executable":"index","experimentalVK":true,"fileSizes":{"index.pck":1142316,"index.wasm":37695054},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4};
+const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":false,"executable":"index","experimentalVK":true,"fileSizes":{"index.pck":1159716,"index.wasm":37695054},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4,"serviceWorker":"index.service.worker.js"};
 const GODOT_THREADS_ENABLED = false;
 const engine = new Engine(GODOT_CONFIG);
 
@@ -191,6 +244,67 @@ const engine = new Engine(GODOT_CONFIG);
 		lines.forEach((line) => {
 			statusNotice.appendChild(document.createTextNode(line));
 			statusNotice.appendChild(document.createElement('br'));
+		});
+	}
+
+	// A newer build's service worker installed behind the running one (the
+	// engine registers the PWA worker at start; its cache keeps the old build
+	// until every tab / the installed app closes): show the update bar. A tap
+	// unregisters every worker and reloads, so the fresh build loads at once.
+	function watchServiceWorkerUpdates() {
+		if (!('serviceWorker' in navigator)) {
+			return;
+		}
+		const bar = document.getElementById('update-bar');
+		if (!bar) {
+			return;
+		}
+		const show = function () {
+			bar.style.display = 'block';
+		};
+		const watch = function (worker) {
+			if (!worker) {
+				return;
+			}
+			worker.addEventListener('statechange', function () {
+				if (worker.state === 'installed' && navigator.serviceWorker.controller) {
+					show();
+				}
+			});
+		};
+		const dropAndReload = function () {
+			navigator.serviceWorker.getRegistrations().then(function (regs) {
+				return Promise.all(regs.map(function (reg) {
+					return reg.unregister();
+				}));
+			}).catch(function () {
+				// Reload anyway.
+			}).then(function () {
+				window.location.reload();
+			});
+		};
+		bar.addEventListener('click', function () {
+			navigator.serviceWorker.getRegistration().then(function (reg) {
+				if (reg && reg.waiting) {
+					// Godot's worker: skip waiting, claim the clients and
+					// navigate them to the fresh build (keeps the cache).
+					reg.waiting.postMessage('update');
+					window.setTimeout(dropAndReload, 4000);
+					return;
+				}
+				dropAndReload();
+			}).catch(dropAndReload);
+		});
+		navigator.serviceWorker.ready.then(function (reg) {
+			if (reg.waiting && navigator.serviceWorker.controller) {
+				show();
+			}
+			watch(reg.installing);
+			reg.addEventListener('updatefound', function () {
+				watch(reg.installing);
+			});
+		}).catch(function () {
+			// No worker: nothing to watch.
 		});
 	}
 
@@ -256,6 +370,7 @@ const engine = new Engine(GODOT_CONFIG);
 			},
 		}).then(() => {
 			setStatusMode('hidden');
+			watchServiceWorkerUpdates();
 		}, displayFailureNotice);
 	}
 }());
