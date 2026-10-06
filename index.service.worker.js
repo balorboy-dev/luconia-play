@@ -4,7 +4,7 @@
 // Incrementing CACHE_VERSION will kick off the install event and force
 // previously cached resources to be updated from the network.
 /** @type {string} */
-const CACHE_VERSION = '1791259558|34386006';
+const CACHE_VERSION = '1791264103|33853087';
 /** @type {string} */
 const CACHE_PREFIX = 'Luconia-sw-cache-';
 const CACHE_NAME = CACHE_PREFIX + CACHE_VERSION;
